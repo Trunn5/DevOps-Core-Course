@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+venv/
+.venv/
+*.egg-info/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Docs (not needed at runtime)
+docs/
+README.md
+
+# Tests
+tests/
+
+# OS
+.DS_Store
+
