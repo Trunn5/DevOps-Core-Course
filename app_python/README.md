@@ -140,6 +140,24 @@ curl http://localhost:5000/health
 | `PORT` | `5000` | Port number to listen on |
 | `DEBUG` | `False` | Enable uvicorn reload mode |
 
+## Docker
+
+### Build Image
+```bash
+docker build -t devops-info-service .
+```
+
+### Run Container
+```bash
+docker run -p 5000:5000 devops-info-service
+```
+
+### Pull from Docker Hub
+```bash
+docker pull dmitry567/devops-info-service:latest
+docker run -p 5000:5000 dmitry567/devops-info-service:latest
+```
+
 ## Project Structure
 
 ```
