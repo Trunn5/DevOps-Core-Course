@@ -1,6 +1,7 @@
 # DevOps Info Service
 
-![CI](https://github.com/dmitry567/DevOps-Core-Course/actions/workflows/python-ci.yml/badge.svg)
+![CI](https://github.com/trunn5/DevOps-Core-Course/actions/workflows/python-ci.yml/badge.svg)
+![Coverage](https://codecov.io/gh/trunn5/DevOps-Core-Course/branch/master/graph/badge.svg)
 
 A Python web service that provides detailed information about itself and its runtime environment. Built as part of the DevOps course curriculum.
 
