@@ -1,5 +1,7 @@
 # DevOps Info Service
 
+![CI](https://github.com/dmitry567/DevOps-Core-Course/actions/workflows/python-ci.yml/badge.svg)
+
 A Python web service that provides detailed information about itself and its runtime environment. Built as part of the DevOps course curriculum.
 
 ## Overview
@@ -171,6 +173,22 @@ app_python/
 └── docs/                    # Documentation
     ├── LAB01.md            # Lab submission
     └── screenshots/        # Evidence screenshots
+```
+
+## Testing
+
+```bash
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+pytest tests/ -v
+
+# Run tests with coverage
+pytest tests/ -v --cov=. --cov-report=term
+
+# Lint
+ruff check .
 ```
 
 ## Development
