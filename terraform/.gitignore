@@ -1,0 +1,15 @@
+# Terraform state
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Variables with secrets
+terraform.tfvars
+*.tfvars
+
+# Credentials
+*.pem
+*.key
+key.json
+
