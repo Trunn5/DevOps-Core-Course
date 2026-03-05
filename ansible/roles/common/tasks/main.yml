@@ -3,17 +3,45 @@
   ansible.builtin.shell: while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
   changed_when: false
 
-- name: Update apt cache
-  ansible.builtin.apt:
-    update_cache: true
-    cache_valid_time: 3600
+- name: Install system packages
+  block:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
 
-- name: Install common packages
-  ansible.builtin.apt:
-    name: "{{ common_packages }}"
-    state: present
+    - name: Install common packages
+      ansible.builtin.apt:
+        name: "{{ common_packages }}"
+        state: present
 
-- name: Set timezone
-  community.general.timezone:
-    name: "{{ timezone }}"
+  rescue:
+    - name: Fix apt on failure
+      ansible.builtin.command: apt-get update --fix-missing
+      changed_when: true
 
+    - name: Retry package install
+      ansible.builtin.apt:
+        name: "{{ common_packages }}"
+        state: present
+
+  always:
+    - name: Log package setup completion
+      ansible.builtin.copy:
+        content: "common packages applied {{ ansible_date_time.iso8601 }}\n"
+        dest: /tmp/ansible_common_done
+        mode: "0644"
+
+  become: true
+  tags:
+    - packages
+
+- name: Configure users
+  block:
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ timezone }}"
+
+  become: true
+  tags:
+    - users
