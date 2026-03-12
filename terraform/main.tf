@@ -57,6 +57,27 @@ resource "yandex_vpc_security_group" "main" {
     v4_cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description    = "Grafana"
+    protocol       = "TCP"
+    port           = 3000
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description    = "Loki"
+    protocol       = "TCP"
+    port           = 3100
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description    = "Python App"
+    protocol       = "TCP"
+    port           = 8000
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     description    = "Allow all outbound"
     protocol       = "ANY"
