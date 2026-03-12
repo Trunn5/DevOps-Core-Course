@@ -6,18 +6,56 @@ import os
 import socket
 import platform
 import logging
+import json
+import sys
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import uvicorn
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+
+class JSONFormatter(logging.Formatter):
+    """Custom JSON formatter for structured logging."""
+    
+    def format(self, record):
+        log_data = {
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'level': record.levelname,
+            'logger': record.name,
+            'message': record.getMessage(),
+            'module': record.module,
+            'function': record.funcName,
+            'line': record.lineno
+        }
+        
+        # Add extra fields if present
+        if hasattr(record, 'method'):
+            log_data['method'] = record.method
+        if hasattr(record, 'path'):
+            log_data['path'] = record.path
+        if hasattr(record, 'status_code'):
+            log_data['status_code'] = record.status_code
+        if hasattr(record, 'client_ip'):
+            log_data['client_ip'] = record.client_ip
+        if hasattr(record, 'user_agent'):
+            log_data['user_agent'] = record.user_agent
+            
+        # Add exception info if present
+        if record.exc_info:
+            log_data['exception'] = self.formatException(record.exc_info)
+            
+        return json.dumps(log_data)
+
+
+# Configure JSON logging
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(JSONFormatter())
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+logger.propagate = False
 
 app = FastAPI(
     title="DevOps Info Service",
@@ -98,7 +136,12 @@ def get_endpoints():
 @app.get('/')
 async def index(request: Request):
     """Main endpoint - returns service and system information."""
-    logger.info(f'Request: {request.method} {request.url.path} from {request.client.host if request.client else "unknown"}')
+    logger.info('Serving main endpoint', extra={
+        'method': request.method,
+        'path': request.url.path,
+        'client_ip': request.client.host if request.client else 'unknown',
+        'user_agent': request.headers.get('user-agent', 'Unknown')
+    })
     
     uptime = get_uptime()
     
@@ -117,9 +160,13 @@ async def index(request: Request):
 
 
 @app.get('/health')
-async def health():
+async def health(request: Request):
     """Health check endpoint for monitoring and orchestration."""
-    logger.debug('Health check requested')
+    logger.info('Health check requested', extra={
+        'method': request.method,
+        'path': request.url.path,
+        'client_ip': request.client.host if request.client else 'unknown'
+    })
     
     return {
         'status': 'healthy',
@@ -131,7 +178,12 @@ async def health():
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
     """Handle 404 Not Found errors."""
-    logger.warning(f'404 Not Found: {request.url.path}')
+    logger.warning('404 Not Found', extra={
+        'method': request.method,
+        'path': request.url.path,
+        'status_code': 404,
+        'client_ip': request.client.host if request.client else 'unknown'
+    })
     return JSONResponse(
         status_code=404,
         content={
@@ -145,7 +197,12 @@ async def not_found_handler(request: Request, exc):
 @app.exception_handler(500)
 async def internal_error_handler(request: Request, exc):
     """Handle 500 Internal Server errors."""
-    logger.error(f'500 Internal Server Error: {exc}')
+    logger.error('500 Internal Server Error', extra={
+        'method': request.method,
+        'path': request.url.path,
+        'status_code': 500,
+        'client_ip': request.client.host if request.client else 'unknown'
+    }, exc_info=exc)
     return JSONResponse(
         status_code=500,
         content={
@@ -156,6 +213,9 @@ async def internal_error_handler(request: Request, exc):
 
 
 if __name__ == '__main__':
-    logger.info(f'Starting DevOps Info Service on {HOST}:{PORT}')
-    logger.info(f'Debug mode: {DEBUG}')
+    logger.info('Starting DevOps Info Service', extra={
+        'host': HOST,
+        'port': PORT,
+        'debug': DEBUG
+    })
     uvicorn.run(app, host=HOST, port=PORT, reload=DEBUG)
