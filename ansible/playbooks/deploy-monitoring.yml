@@ -1,0 +1,10 @@
+---
+- name: Deploy Monitoring Stack
+  hosts: webservers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  roles:
+    - role: monitoring
+      tags: [monitoring]

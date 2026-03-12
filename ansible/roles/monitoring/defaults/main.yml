@@ -1,0 +1,51 @@
+---
+# Monitoring Stack Configuration
+monitoring_dir: /opt/monitoring
+monitoring_compose_project: monitoring
+
+# Service Versions
+loki_version: "3.0.0"
+promtail_version: "3.0.0"
+grafana_version: "11.3.0"
+
+# Ports
+loki_port: 3100
+grafana_port: 3000
+promtail_port: 9080
+
+# Loki Configuration
+loki_retention_period: 168h
+loki_ingestion_rate_mb: 10
+loki_ingestion_burst_mb: 20
+
+# Resource Limits
+loki_cpu_limit: "1.0"
+loki_memory_limit: "1G"
+loki_cpu_reservation: "0.5"
+loki_memory_reservation: "512M"
+
+promtail_cpu_limit: "0.5"
+promtail_memory_limit: "256M"
+promtail_cpu_reservation: "0.2"
+promtail_memory_reservation: "128M"
+
+grafana_cpu_limit: "1.0"
+grafana_memory_limit: "512M"
+grafana_cpu_reservation: "0.5"
+grafana_memory_reservation: "256M"
+
+# Grafana Configuration
+grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') | default('admin', true) }}"
+grafana_anonymous_enabled: false
+
+# Applications to monitor
+monitored_apps:
+  - name: devops-python
+    image: dmitry567/devops-info-service
+    tag: latest
+    port: 8000
+    internal_port: 5000
+    cpu_limit: "0.5"
+    memory_limit: "256M"
+    cpu_reservation: "0.25"
+    memory_reservation: "128M"
