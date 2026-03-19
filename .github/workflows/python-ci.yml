@@ -2,7 +2,7 @@ name: Python CI
 
 on:
   push:
-    branches: [main, master, lab03]
+    branches: [main, master, lab03, lab08]
     paths:
       - 'app_python/**'
       - '.github/workflows/python-ci.yml'

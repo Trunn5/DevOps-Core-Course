@@ -7,6 +7,7 @@ networks:
 volumes:
   loki-data:
   grafana-data:
+  prometheus-data:
 
 services:
   loki:
@@ -63,6 +64,8 @@ services:
       - "{{ grafana_port }}:3000"
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_AUTH_ANONYMOUS_ENABLED={{ 'true' if grafana_anonymous_enabled else 'false' }}
@@ -71,6 +74,7 @@ services:
       - logging
     depends_on:
       - loki
+      - prometheus
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
       interval: 10s
@@ -85,6 +89,39 @@ services:
         reservations:
           cpus: '{{ grafana_cpu_reservation }}'
           memory: {{ grafana_memory_reservation }}
+
+  prometheus:
+    image: prom/prometheus:v{{ prometheus_version }}
+    container_name: prometheus
+    ports:
+      - "{{ prometheus_port }}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time={{ prometheus_retention_time }}'
+      - '--storage.tsdb.retention.size={{ prometheus_retention_size }}'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - logging
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '{{ prometheus_cpu_limit }}'
+          memory: {{ prometheus_memory_limit }}
+        reservations:
+          cpus: '{{ prometheus_cpu_reservation }}'
+          memory: {{ prometheus_memory_reservation }}
 
 {% for app in monitored_apps %}
   {{ app.name }}:
