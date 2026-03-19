@@ -7,11 +7,13 @@ monitoring_compose_project: monitoring
 loki_version: "3.0.0"
 promtail_version: "3.0.0"
 grafana_version: "11.3.0"
+prometheus_version: "3.0.0"
 
 # Ports
 loki_port: 3100
 grafana_port: 3000
 promtail_port: 9080
+prometheus_port: 9090
 
 # Loki Configuration
 loki_retention_period: 168h
@@ -33,6 +35,17 @@ grafana_cpu_limit: "1.0"
 grafana_memory_limit: "512M"
 grafana_cpu_reservation: "0.5"
 grafana_memory_reservation: "256M"
+
+prometheus_cpu_limit: "1.0"
+prometheus_memory_limit: "1G"
+prometheus_cpu_reservation: "0.5"
+prometheus_memory_reservation: "512M"
+
+# Prometheus Configuration
+prometheus_retention_time: 15d
+prometheus_retention_size: 10GB
+prometheus_scrape_interval: 15s
+prometheus_evaluation_interval: 15s
 
 # Grafana Configuration
 grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') | default('admin', true) }}"

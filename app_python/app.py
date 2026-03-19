@@ -8,11 +8,13 @@ import platform
 import logging
 import json
 import sys
+import time
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 import uvicorn
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 
 class JSONFormatter(logging.Formatter):
@@ -79,6 +81,35 @@ SERVICE_INFO = {
     'framework': 'FastAPI'
 }
 
+# Prometheus metrics
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status']
+)
+
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint']
+)
+
+http_requests_in_progress = Gauge(
+    'http_requests_in_progress',
+    'Number of HTTP requests currently being processed'
+)
+
+endpoint_calls = Counter(
+    'devops_info_endpoint_calls',
+    'Number of calls to each endpoint',
+    ['endpoint']
+)
+
+system_info_collection_duration = Histogram(
+    'devops_info_system_collection_seconds',
+    'Time spent collecting system information'
+)
+
 
 def get_uptime():
     """Calculate application uptime since start."""
@@ -105,7 +136,8 @@ def get_uptime():
 
 def get_system_info():
     """Collect system information."""
-    return {
+    start = time.time()
+    info = {
         'hostname': socket.gethostname(),
         'platform': platform.system(),
         'platform_version': platform.platform(),
@@ -113,6 +145,8 @@ def get_system_info():
         'cpu_count': os.cpu_count(),
         'python_version': platform.python_version()
     }
+    system_info_collection_duration.observe(time.time() - start)
+    return info
 
 
 def get_request_info(request: Request):
@@ -129,8 +163,56 @@ def get_endpoints():
     """List available API endpoints."""
     return [
         {'path': '/', 'method': 'GET', 'description': 'Service information'},
-        {'path': '/health', 'method': 'GET', 'description': 'Health check'}
+        {'path': '/health', 'method': 'GET', 'description': 'Health check'},
+        {'path': '/metrics', 'method': 'GET', 'description': 'Prometheus metrics'}
     ]
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Middleware to collect Prometheus metrics for each request."""
+    # Track in-progress requests
+    http_requests_in_progress.inc()
+    
+    # Record start time
+    start_time = time.time()
+    
+    try:
+        # Process request
+        response = await call_next(request)
+        
+        # Calculate duration
+        duration = time.time() - start_time
+        
+        # Normalize endpoint for metrics
+        endpoint = request.url.path
+        if endpoint not in ['/', '/health', '/metrics']:
+            endpoint = 'other'
+        
+        # Record metrics
+        http_requests_total.labels(
+            method=request.method,
+            endpoint=endpoint,
+            status=response.status_code
+        ).inc()
+        
+        http_request_duration_seconds.labels(
+            method=request.method,
+            endpoint=endpoint
+        ).observe(duration)
+        
+        endpoint_calls.labels(endpoint=endpoint).inc()
+        
+        return response
+    finally:
+        # Decrement in-progress counter
+        http_requests_in_progress.dec()
+
+
+@app.get('/metrics')
+async def metrics():
+    """Prometheus metrics endpoint."""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get('/')
