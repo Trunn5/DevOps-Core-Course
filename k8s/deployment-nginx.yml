@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-nginx-app
+  namespace: devops
+  labels:
+    app: devops-nginx
+    version: v1
+    component: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: devops-nginx
+  template:
+    metadata:
+      labels:
+        app: devops-nginx
+        version: v1
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27-alpine
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-html
+  namespace: devops
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>DevOps Nginx App</title>
+        <style>
+            body { font-family: Arial; margin: 40px; background: #f0f0f0; }
+            .container { background: white; padding: 30px; border-radius: 10px; }
+            h1 { color: #009639; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 DevOps Nginx Application</h1>
+            <p>This is the second application for Lab 9 Ingress demonstration.</p>
+            <p><strong>Deployment:</strong> Kubernetes with Ingress routing</p>
+            <p><strong>Path:</strong> /app2</p>
+        </div>
+    </body>
+    </html>

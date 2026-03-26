@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-nginx-service
+  namespace: devops
+  labels:
+    app: devops-nginx
+spec:
+  type: ClusterIP
+  selector:
+    app: devops-nginx
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
