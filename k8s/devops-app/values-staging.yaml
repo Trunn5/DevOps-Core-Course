@@ -1,0 +1,43 @@
+# Staging environment values
+replicaCount: 2
+
+image:
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "staging"
+  LOG_LEVEL: "INFO"
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 192Mi
+  requests:
+    cpu: 75m
+    memory: 96Mi
+
+ingress:
+  enabled: true
+  hosts:
+    - host: staging.devops.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+service:
+  type: ClusterIP
+
+autoscaling:
+  enabled: false
+
+hooks:
+  preInstall:
+    enabled: true
+  postInstall:
+    enabled: true
+  preUpgrade:
+    enabled: true
+  postUpgrade:
+    enabled: true
