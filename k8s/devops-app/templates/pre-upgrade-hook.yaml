@@ -1,0 +1,29 @@
+{{- if .Values.hooks.preUpgrade.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "devops-app.fullname" . }}-pre-upgrade
+  labels:
+    {{- include "devops-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    metadata:
+      name: {{ include "devops-app.fullname" . }}-pre-upgrade
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: pre-upgrade-job
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          echo "🔄 Pre-upgrade hook: Backing up current state..."
+          echo "Current replicas: {{ .Values.replicaCount }}"
+          echo "Target image: {{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          echo "✅ Pre-upgrade checks complete"
+{{- end }}

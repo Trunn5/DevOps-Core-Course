@@ -1,0 +1,29 @@
+---
+- name: Deploy All Applications
+  hosts: webservers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  tasks:
+    - name: Deploy Python App
+      ansible.builtin.include_role:
+        name: web_app
+      vars:
+        app_name: devops-python
+        docker_image: dmitry567/devops-info-service
+        docker_tag: latest
+        app_port: "5000"
+        app_internal_port: "5000"
+        compose_project_dir: "/opt/devops-python"
+
+    - name: Deploy Scala App
+      ansible.builtin.include_role:
+        name: web_app
+      vars:
+        app_name: devops-scala
+        docker_image: dmitry567/devops-info-service-scala
+        docker_tag: latest
+        app_port: "5001"
+        app_internal_port: "5000"
+        compose_project_dir: "/opt/devops-scala"
