@@ -1,0 +1,12 @@
+apiVersion: v2
+name: devops-common
+description: A library chart for common DevOps resources and templates
+type: library
+version: 1.0.0
+keywords:
+  - devops
+  - library
+  - templates
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com
