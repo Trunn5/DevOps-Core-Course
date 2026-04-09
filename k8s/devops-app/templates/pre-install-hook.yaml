@@ -1,0 +1,32 @@
+{{- if .Values.hooks.preInstall.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "devops-app.fullname" . }}-pre-install
+  labels:
+    {{- include "devops-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    metadata:
+      name: {{ include "devops-app.fullname" . }}-pre-install
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: pre-install-job
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          echo "🚀 Pre-install hook: Validating environment..."
+          echo "Release: {{ .Release.Name }}"
+          echo "Namespace: {{ .Release.Namespace }}"
+          echo "Chart: {{ .Chart.Name }} v{{ .Chart.Version }}"
+          echo "Replicas: {{ .Values.replicaCount }}"
+          echo "Image: {{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          echo "✅ Environment validation complete"
+{{- end }}

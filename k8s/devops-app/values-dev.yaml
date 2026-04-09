@@ -1,0 +1,39 @@
+# Development environment values
+replicaCount: 1
+
+image:
+  tag: "latest"
+  pullPolicy: Always
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "development"
+  LOG_LEVEL: "DEBUG"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+ingress:
+  enabled: false
+
+service:
+  type: NodePort
+  nodePort: 30080
+
+autoscaling:
+  enabled: false
+
+hooks:
+  preInstall:
+    enabled: true
+  postInstall:
+    enabled: true
+  preUpgrade:
+    enabled: false
+  postUpgrade:
+    enabled: false
