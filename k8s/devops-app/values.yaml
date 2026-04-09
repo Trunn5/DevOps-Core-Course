@@ -105,6 +105,26 @@ configMap:
     SERVICE_NAME: "devops-info-service"
     VERSION: "1.0.0"
 
+# Secrets (placeholder values - override at deployment time)
+secrets:
+  enabled: true
+  data:
+    DATABASE_USERNAME: "placeholder_user"
+    DATABASE_PASSWORD: "placeholder_pass"
+    API_KEY: "placeholder_key"
+
+# Vault integration
+vault:
+  enabled: false
+  role: "devops-app"
+  secretPath: "secret/data/devops-app/config"
+  template: |
+    {{- with secret "secret/data/devops-app/config" -}}
+    export DATABASE_USERNAME="{{ .Data.data.username }}"
+    export DATABASE_PASSWORD="{{ .Data.data.password }}"
+    export API_KEY="{{ .Data.data.api_key }}"
+    {{- end -}}
+
 # Lifecycle hooks
 hooks:
   preInstall:

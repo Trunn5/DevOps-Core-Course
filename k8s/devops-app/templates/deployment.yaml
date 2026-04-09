@@ -20,6 +20,10 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.secrets.enabled }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- include "devops-app.vaultAnnotations" . | nindent 8 }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -44,14 +48,15 @@ spec:
           containerPort: {{ .Values.service.targetPort }}
           protocol: TCP
         env:
-        {{- range $key, $value := .Values.env }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
+        {{- include "devops-app.envVars" . | nindent 8 }}
         {{- if .Values.configMap.enabled }}
         envFrom:
         - configMapRef:
             name: {{ include "devops-app.fullname" . }}
+        {{- end }}
+        {{- if .Values.secrets.enabled }}
+        - secretRef:
+            name: {{ include "devops-app.fullname" . }}-secret
         {{- end }}
         livenessProbe:
           {{- toYaml .Values.livenessProbe | nindent 12 }}
