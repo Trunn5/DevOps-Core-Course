@@ -58,3 +58,28 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Common environment variables for all containers
+*/}}
+{{- define "devops-app.envVars" -}}
+{{- range $key, $value := .Values.env }}
+- name: {{ $key }}
+  value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
+Vault Agent injection annotations
+*/}}
+{{- define "devops-app.vaultAnnotations" -}}
+{{- if .Values.vault.enabled }}
+vault.hashicorp.com/agent-inject: "true"
+vault.hashicorp.com/role: {{ .Values.vault.role | quote }}
+vault.hashicorp.com/agent-inject-secret-config: {{ .Values.vault.secretPath | quote }}
+{{- if .Values.vault.template }}
+vault.hashicorp.com/agent-inject-template-config: |
+  {{- .Values.vault.template | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
