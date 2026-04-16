@@ -10,11 +10,17 @@ import json
 import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
+import fcntl
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 import uvicorn
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+
+# Data directory for persistent storage
+DATA_DIR = Path(os.getenv('DATA_DIR', '/data'))
+VISITS_FILE = DATA_DIR / 'visits'
 
 
 class JSONFormatter(logging.Formatter):
@@ -65,6 +71,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize application on startup."""
+    # Ensure data directory exists and initialize visits counter
+    ensure_data_dir()
+    initial_count = read_visits()
+    visits_counter.set(initial_count)
+    logger.info(f"Application started with {initial_count} visits")
+
+
 # Configuration from environment variables
 HOST = os.getenv('HOST', '0.0.0.0')
 PORT = int(os.getenv('PORT', 5000))
@@ -109,6 +126,77 @@ system_info_collection_duration = Histogram(
     'devops_info_system_collection_seconds',
     'Time spent collecting system information'
 )
+
+# Visits counter metric
+visits_counter = Gauge(
+    'devops_info_visits_total',
+    'Total number of visits to the main endpoint'
+)
+
+
+def ensure_data_dir():
+    """Ensure data directory exists."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Data directory ensured at {DATA_DIR}")
+
+
+def read_visits():
+    """Read visits counter from file with file locking."""
+    ensure_data_dir()
+    
+    if not VISITS_FILE.exists():
+        logger.info("Visits file does not exist, initializing to 0")
+        return 0
+    
+    try:
+        with open(VISITS_FILE, 'r') as f:
+            # Acquire shared lock for reading
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            try:
+                count = int(f.read().strip() or '0')
+                logger.debug(f"Read visits count: {count}")
+                return count
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f"Error reading visits file: {e}", exc_info=True)
+        return 0
+
+
+def write_visits(count):
+    """Write visits counter to file with file locking."""
+    ensure_data_dir()
+    
+    try:
+        # Write to temporary file first, then rename (atomic operation)
+        temp_file = VISITS_FILE.with_suffix('.tmp')
+        with open(temp_file, 'w') as f:
+            # Acquire exclusive lock for writing
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.write(str(count))
+                f.flush()
+                os.fsync(f.fileno())
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        
+        # Atomic rename
+        temp_file.replace(VISITS_FILE)
+        
+        # Update Prometheus metric
+        visits_counter.set(count)
+        
+        logger.debug(f"Wrote visits count: {count}")
+    except Exception as e:
+        logger.error(f"Error writing visits file: {e}", exc_info=True)
+
+
+def increment_visits():
+    """Increment and return the visits counter."""
+    count = read_visits()
+    count += 1
+    write_visits(count)
+    return count
 
 
 def get_uptime():
@@ -164,6 +252,7 @@ def get_endpoints():
     return [
         {'path': '/', 'method': 'GET', 'description': 'Service information'},
         {'path': '/health', 'method': 'GET', 'description': 'Health check'},
+        {'path': '/visits', 'method': 'GET', 'description': 'Visit counter'},
         {'path': '/metrics', 'method': 'GET', 'description': 'Prometheus metrics'}
     ]
 
@@ -218,11 +307,15 @@ async def metrics():
 @app.get('/')
 async def index(request: Request):
     """Main endpoint - returns service and system information."""
+    # Increment visits counter
+    visit_count = increment_visits()
+    
     logger.info('Serving main endpoint', extra={
         'method': request.method,
         'path': request.url.path,
         'client_ip': request.client.host if request.client else 'unknown',
-        'user_agent': request.headers.get('user-agent', 'Unknown')
+        'user_agent': request.headers.get('user-agent', 'Unknown'),
+        'visit_count': visit_count
     })
     
     uptime = get_uptime()
@@ -237,7 +330,27 @@ async def index(request: Request):
             'timezone': 'UTC'
         },
         'request': get_request_info(request),
+        'visits': visit_count,
         'endpoints': get_endpoints()
+    }
+
+
+@app.get('/visits')
+async def visits(request: Request):
+    """Visits counter endpoint - returns the current visit count."""
+    count = read_visits()
+    
+    logger.info('Visits endpoint accessed', extra={
+        'method': request.method,
+        'path': request.url.path,
+        'client_ip': request.client.host if request.client else 'unknown',
+        'current_count': count
+    })
+    
+    return {
+        'visits': count,
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'data_file': str(VISITS_FILE)
     }
 
 

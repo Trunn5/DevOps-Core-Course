@@ -20,6 +20,9 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.configFile.enabled }}
+        checksum/config-file: {{ include (print $.Template.BasePath "/configmap-file.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.secrets.enabled }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
         {{- end }}
@@ -58,12 +61,33 @@ spec:
         - secretRef:
             name: {{ include "devops-app.fullname" . }}-secret
         {{- end }}
+        {{- if .Values.configFile.enabled }}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+          readOnly: true
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: data-volume
+          mountPath: /data
+        {{- end }}
         livenessProbe:
           {{- toYaml .Values.livenessProbe | nindent 12 }}
         readinessProbe:
           {{- toYaml .Values.readinessProbe | nindent 12 }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      {{- if .Values.configFile.enabled }}
+      - name: config-volume
+        configMap:
+          name: {{ include "devops-app.fullname" . }}-config-file
+      {{- end }}
+      {{- if .Values.persistence.enabled }}
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: {{ include "devops-app.fullname" . }}-data
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

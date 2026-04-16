@@ -105,6 +105,16 @@ configMap:
     SERVICE_NAME: "devops-info-service"
     VERSION: "1.0.0"
 
+# ConfigMap file mounting
+configFile:
+  enabled: true
+
+# Persistent storage for visits data
+persistence:
+  enabled: true
+  size: 100Mi
+  storageClass: ""  # Use default storage class
+
 # Secrets (placeholder values - override at deployment time)
 secrets:
   enabled: true
