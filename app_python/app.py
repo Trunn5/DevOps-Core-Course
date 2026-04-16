@@ -12,6 +12,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 import fcntl
+import tempfile
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
@@ -19,7 +20,20 @@ import uvicorn
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 # Data directory for persistent storage
-DATA_DIR = Path(os.getenv('DATA_DIR', '/data'))
+# Fallback to temp directory if /data is not writable
+DEFAULT_DATA_DIR = os.getenv('DATA_DIR', '/data')
+try:
+    DATA_DIR = Path(DEFAULT_DATA_DIR)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    # Test if writable
+    test_file = DATA_DIR / '.write_test'
+    test_file.touch()
+    test_file.unlink()
+except (PermissionError, OSError):
+    # Fallback to temp directory for testing/development
+    DATA_DIR = Path(tempfile.gettempdir()) / 'devops-app-data'
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 VISITS_FILE = DATA_DIR / 'visits'
 
 
@@ -136,14 +150,12 @@ visits_counter = Gauge(
 
 def ensure_data_dir():
     """Ensure data directory exists."""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Data directory ensured at {DATA_DIR}")
+    # Directory is already created at module load, just log it
+    logger.info(f"Data directory: {DATA_DIR}")
 
 
 def read_visits():
     """Read visits counter from file with file locking."""
-    ensure_data_dir()
-    
     if not VISITS_FILE.exists():
         logger.info("Visits file does not exist, initializing to 0")
         return 0
@@ -165,8 +177,6 @@ def read_visits():
 
 def write_visits(count):
     """Write visits counter to file with file locking."""
-    ensure_data_dir()
-    
     try:
         # Write to temporary file first, then rename (atomic operation)
         temp_file = VISITS_FILE.with_suffix('.tmp')
