@@ -136,6 +136,34 @@ curl http://localhost:5000/health
 **HTTP Status Codes:**
 - `200 OK` - Service is healthy
 
+### `GET /visits` - Visit Counter (Lab 12)
+
+Returns the total number of visits to the root endpoint. The counter persists across application restarts.
+
+**Request:**
+```bash
+curl http://localhost:5000/visits
+```
+
+**Response:**
+```json
+{
+  "visits": 42,
+  "timestamp": "2026-01-28T14:30:00.000000+00:00",
+  "data_file": "/data/visits"
+}
+```
+
+**Features:**
+- Counter increments on each request to `/`
+- Data persists to file with atomic writes
+- File locking prevents race conditions
+- Survives container/pod restarts
+
+### `GET /metrics` - Prometheus Metrics
+
+Returns Prometheus metrics including the visits counter gauge.
+
 ## Configuration
 
 | Variable | Default | Description |
@@ -143,6 +171,40 @@ curl http://localhost:5000/health
 | `HOST` | `0.0.0.0` | Host address to bind to |
 | `PORT` | `5000` | Port number to listen on |
 | `DEBUG` | `False` | Enable uvicorn reload mode |
+| `DATA_DIR` | `/data` | Directory for persistent data storage |
+
+## Persistent Data
+
+The application stores visit counts in a file (`/data/visits`) to persist across container restarts.
+
+**Local Development:**
+```bash
+# Create data directory
+mkdir -p ./data
+
+# Run with custom data directory
+DATA_DIR=./data python app.py
+```
+
+**Docker:**
+```bash
+# Mount volume for persistence
+docker run -p 5000:5000 -v $(pwd)/data:/data devops-info-service
+```
+
+**Docker Compose:**
+```bash
+# Start with persistent volume
+docker-compose up -d
+
+# Test visits counter
+curl http://localhost:5000/
+curl http://localhost:5000/visits
+
+# Restart and verify count persists
+docker-compose restart
+curl http://localhost:5000/visits
+```
 
 ## Docker
 
