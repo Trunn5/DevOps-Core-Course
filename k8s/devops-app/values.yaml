@@ -1,0 +1,154 @@
+# Default values for devops-app
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 3
+
+image:
+  repository: dmitry567/devops-info-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: devops.local
+      paths:
+        - path: /app1(/|$)(.*)
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: devops-tls-secret
+      hosts:
+        - devops.local
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Application environment variables
+env:
+  PORT: "5000"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+
+# ConfigMap data
+configMap:
+  enabled: true
+  data:
+    SERVICE_NAME: "devops-info-service"
+    VERSION: "1.0.0"
+
+# ConfigMap file mounting
+configFile:
+  enabled: true
+
+# Persistent storage for visits data
+persistence:
+  enabled: true
+  size: 100Mi
+  storageClass: ""  # Use default storage class
+
+# Secrets (placeholder values - override at deployment time)
+secrets:
+  enabled: true
+  data:
+    DATABASE_USERNAME: "placeholder_user"
+    DATABASE_PASSWORD: "placeholder_pass"
+    API_KEY: "placeholder_key"
+
+# Vault integration
+vault:
+  enabled: false
+  role: "devops-app"
+  secretPath: "secret/data/devops-app/config"
+  template: |
+    {{- with secret "secret/data/devops-app/config" -}}
+    export DATABASE_USERNAME="{{ .Data.data.username }}"
+    export DATABASE_PASSWORD="{{ .Data.data.password }}"
+    export API_KEY="{{ .Data.data.api_key }}"
+    {{- end -}}
+
+# Lifecycle hooks
+hooks:
+  preInstall:
+    enabled: true
+  postInstall:
+    enabled: true
+  preUpgrade:
+    enabled: true
+  postUpgrade:
+    enabled: true
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s

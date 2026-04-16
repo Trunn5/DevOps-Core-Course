@@ -1,0 +1,59 @@
+# Production environment values
+replicaCount: 5
+
+image:
+  tag: "2026.03"
+  pullPolicy: IfNotPresent
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "WARNING"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: devops.production.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+service:
+  type: ClusterIP
+
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+hooks:
+  preInstall:
+    enabled: true
+  postInstall:
+    enabled: true
+  preUpgrade:
+    enabled: true
+  postUpgrade:
+    enabled: true
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "5000"
+  prometheus.io/path: "/metrics"
+
+monitoring:
+  enabled: true
