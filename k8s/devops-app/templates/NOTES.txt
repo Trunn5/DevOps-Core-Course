@@ -1,0 +1,50 @@
+🎉 {{ .Chart.Name }} has been installed!
+
+Release Name: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Chart Version: {{ .Chart.Version }}
+App Version: {{ .Chart.AppVersion }}
+
+📊 Deployment Status:
+  Replicas: {{ .Values.replicaCount }}
+  Image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+
+🔗 Access Your Application:
+
+{{- if .Values.ingress.enabled }}
+  Via Ingress:
+  {{- range .Values.ingress.hosts }}
+    {{- range .paths }}
+    https://{{ .host }}{{ .path }}
+    {{- end }}
+  {{- end }}
+
+  Note: Add to /etc/hosts if testing locally:
+    $(minikube ip) {{ (index .Values.ingress.hosts 0).host }}
+{{- else if eq .Values.service.type "NodePort" }}
+  Via NodePort:
+    minikube service {{ include "devops-app.fullname" . }} -n {{ .Release.Namespace }}
+{{- else if eq .Values.service.type "ClusterIP" }}
+  Via Port-Forward:
+    kubectl port-forward -n {{ .Release.Namespace }} service/{{ include "devops-app.fullname" . }} 8080:{{ .Values.service.port }}
+    curl http://localhost:8080/
+{{- end }}
+
+📝 Useful Commands:
+
+  Get pods:
+    kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+  View logs:
+    kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+  Update release:
+    helm upgrade {{ .Release.Name }} devops-app
+
+  Rollback:
+    helm rollback {{ .Release.Name }}
+
+  Uninstall:
+    helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+✨ Happy DevOps! ✨

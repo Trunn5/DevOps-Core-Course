@@ -1,0 +1,7 @@
+---
+app_name: devops-scala
+docker_image: dmitry567/devops-info-service-scala
+docker_tag: latest
+app_port: "5001"
+app_internal_port: "5000"
+compose_project_dir: "/opt/{{ app_name }}"
