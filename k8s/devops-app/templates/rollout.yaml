@@ -1,6 +1,6 @@
-{{- if not .Values.rollout.enabled }}
-apiVersion: apps/v1
-kind: Deployment
+{{- if .Values.rollout.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "devops-app.fullname" . }}
   labels:
@@ -12,11 +12,6 @@ spec:
   selector:
     matchLabels:
       {{- include "devops-app.selectorLabels" . | nindent 6 }}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
   template:
     metadata:
       annotations:
@@ -101,4 +96,24 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+  strategy:
+    {{- if eq .Values.rollout.strategy "blueGreen" }}
+    blueGreen:
+      activeService: {{ default (include "devops-app.fullname" .) .Values.rollout.blueGreen.activeService }}
+      previewService: {{ default (printf "%s-preview" (include "devops-app.fullname" .)) .Values.rollout.blueGreen.previewService }}
+      autoPromotionEnabled: {{ .Values.rollout.blueGreen.autoPromotionEnabled }}
+      {{- if .Values.rollout.blueGreen.autoPromotionSeconds }}
+      autoPromotionSeconds: {{ .Values.rollout.blueGreen.autoPromotionSeconds }}
+      {{- end }}
+    {{- else }}
+    canary:
+      {{- if .Values.rollout.canary.maxSurge }}
+      maxSurge: {{ .Values.rollout.canary.maxSurge | quote }}
+      {{- end }}
+      {{- if .Values.rollout.canary.maxUnavailable }}
+      maxUnavailable: {{ .Values.rollout.canary.maxUnavailable | quote }}
+      {{- end }}
+      steps:
+        {{- toYaml .Values.rollout.canary.steps | nindent 8 }}
+    {{- end }}
 {{- end }}

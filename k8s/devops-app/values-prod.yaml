@@ -57,3 +57,9 @@ podAnnotations:
 
 monitoring:
   enabled: true
+
+rollout:
+  enabled: true
+  strategy: blueGreen
+  blueGreen:
+    autoPromotionEnabled: false
