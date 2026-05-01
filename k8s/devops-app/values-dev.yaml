@@ -28,6 +28,29 @@ service:
 autoscaling:
   enabled: false
 
+rollout:
+  enabled: true
+  strategy: canary
+  canary:
+    steps:
+      - setWeight: 20
+      - pause: {}
+      - analysis:
+          templates:
+            - templateName: health-check
+      - setWeight: 40
+      - pause:
+          duration: 30s
+      - setWeight: 60
+      - pause:
+          duration: 30s
+      - setWeight: 80
+      - pause:
+          duration: 30s
+      - setWeight: 100
+  analysis:
+    enabled: true
+
 hooks:
   preInstall:
     enabled: true

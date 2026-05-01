@@ -26,7 +26,7 @@ spec:
       project: default
       source:
         repoURL: https://github.com/Trunn5/DevOps-Core-Course.git
-        targetRevision: lab13
+        targetRevision: lab14
         path: k8s/devops-app
         helm:
           valueFiles:
