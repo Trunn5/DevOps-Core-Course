@@ -1,0 +1,60 @@
+# StatefulSet with partitioned rolling update (Bonus)
+# Only pods with ordinal >= partition will be updated
+replicaCount: 3
+
+image:
+  repository: dmitry567/devops-info-service
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "stateful"
+  LOG_LEVEL: "INFO"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+service:
+  type: ClusterIP
+
+autoscaling:
+  enabled: false
+
+rollout:
+  enabled: false
+
+persistence:
+  enabled: false
+
+statefulset:
+  enabled: true
+  podManagementPolicy: OrderedReady
+  # Partition at 2 means only pod-2 will be updated
+  # Pod-0 and pod-1 remain on old version
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 2
+  headlessService:
+    publishNotReadyAddresses: true
+  volumeClaimTemplates:
+    accessModes:
+      - ReadWriteOnce
+    storage: 100Mi
+    storageClassName: ""
+
+hooks:
+  preInstall:
+    enabled: false
+  postInstall:
+    enabled: false
+  preUpgrade:
+    enabled: false
+  postUpgrade:
+    enabled: false

@@ -7,8 +7,8 @@ metadata:
     {{- include "devops-app.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
-    apiVersion: {{ ternary "argoproj.io/v1alpha1" "apps/v1" .Values.rollout.enabled }}
-    kind: {{ ternary "Rollout" "Deployment" .Values.rollout.enabled }}
+    apiVersion: {{ if .Values.rollout.enabled }}argoproj.io/v1alpha1{{ else }}apps/v1{{ end }}
+    kind: {{ if .Values.statefulset.enabled }}StatefulSet{{ else if .Values.rollout.enabled }}Rollout{{ else }}Deployment{{ end }}
     name: {{ include "devops-app.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
