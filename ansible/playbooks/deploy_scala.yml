@@ -1,0 +1,10 @@
+---
+- name: Deploy Scala Application
+  hosts: webservers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+    - ../vars/app_scala.yml
+
+  roles:
+    - web_app

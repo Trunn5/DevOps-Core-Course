@@ -1,0 +1,62 @@
+# StatefulSet deployment values
+replicaCount: 3
+
+image:
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "stateful"
+  LOG_LEVEL: "INFO"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+ingress:
+  enabled: false
+
+service:
+  type: ClusterIP
+
+autoscaling:
+  enabled: false
+
+# Disable Rollout for StatefulSet
+rollout:
+  enabled: false
+
+# Disable standalone PVC (StatefulSet creates per-pod PVCs)
+persistence:
+  enabled: false
+
+# Enable StatefulSet
+statefulset:
+  enabled: true
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  headlessService:
+    publishNotReadyAddresses: true
+  volumeClaimTemplates:
+    accessModes:
+      - ReadWriteOnce
+    storage: 100Mi
+    storageClassName: ""
+
+hooks:
+  preInstall:
+    enabled: false
+  postInstall:
+    enabled: false
+  preUpgrade:
+    enabled: false
+  postUpgrade:
+    enabled: false

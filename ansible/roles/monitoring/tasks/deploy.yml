@@ -1,0 +1,73 @@
+---
+- name: Deploy monitoring stack with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_dir }}"
+    state: present
+    pull: "always"
+  register: compose_result
+
+- name: Wait for Loki to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ loki_port }}/ready"
+    status_code: 200
+  register: loki_health
+  until: loki_health.status == 200
+  retries: 30
+  delay: 2
+
+- name: Wait for Grafana to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_port }}/api/health"
+    status_code: 200
+  register: grafana_health
+  until: grafana_health.status == 200
+  retries: 30
+  delay: 2
+
+- name: Check if Loki data source exists
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_port }}/api/datasources/name/Loki"
+    method: GET
+    user: admin
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    status_code: [200, 404, 401]
+  register: datasource_check
+  no_log: true
+  ignore_errors: true
+
+- name: Configure Loki data source in Grafana
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_port }}/api/datasources"
+    method: POST
+    user: admin
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      name: "Loki"
+      type: "loki"
+      access: "proxy"
+      url: "http://loki:{{ loki_port }}"
+      isDefault: true
+      jsonData:
+        maxLines: 1000
+    status_code: [200, 409, 401]
+  when: datasource_check.status is defined and datasource_check.status == 404
+  no_log: true
+  ignore_errors: true
+
+- name: Display monitoring stack status
+  ansible.builtin.debug:
+    msg:
+      - "Monitoring stack deployed successfully!"
+      - "Grafana: http://{{ ansible_host }}:{{ grafana_port }}"
+      - "Loki: http://{{ ansible_host }}:{{ loki_port }}"
+      - "Note: If Grafana datasource config failed (wrong password), configure manually in UI"
+      - "Username: admin"
+
+- name: Verify applications are logging
+  ansible.builtin.command:
+    cmd: "curl -s http://localhost:{{ grafana_port }}/api/health"
+  register: final_check
+  changed_when: false

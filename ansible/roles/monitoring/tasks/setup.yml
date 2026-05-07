@@ -1,0 +1,81 @@
+---
+- name: Create monitoring directory structure
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ monitoring_dir }}"
+    - "{{ monitoring_dir }}/loki"
+    - "{{ monitoring_dir }}/promtail"
+    - "{{ monitoring_dir }}/prometheus"
+    - "{{ monitoring_dir }}/prometheus/rules"
+    - "{{ monitoring_dir }}/grafana/provisioning/datasources"
+    - "{{ monitoring_dir }}/grafana/provisioning/dashboards"
+    - "{{ monitoring_dir }}/grafana/dashboards"
+
+- name: Template Loki configuration
+  ansible.builtin.template:
+    src: loki-config.yml.j2
+    dest: "{{ monitoring_dir }}/loki/config.yml"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Template Promtail configuration
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: "{{ monitoring_dir }}/promtail/config.yml"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Template Prometheus configuration
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_dir }}/prometheus/prometheus.yml"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Template Prometheus alerting rules
+  ansible.builtin.template:
+    src: alerts.yml.j2
+    dest: "{{ monitoring_dir }}/prometheus/rules/alerts.yml"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Template Grafana datasources
+  ansible.builtin.template:
+    src: grafana-datasources.yml.j2
+    dest: "{{ monitoring_dir }}/grafana/provisioning/datasources/datasources.yml"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Template Grafana dashboard provisioning
+  ansible.builtin.template:
+    src: grafana-dashboards-provisioning.yml.j2
+    dest: "{{ monitoring_dir }}/grafana/provisioning/dashboards/dashboards.yml"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Copy Grafana application dashboard
+  ansible.builtin.copy:
+    src: app-metrics-dashboard.json
+    dest: "{{ monitoring_dir }}/grafana/dashboards/app-metrics.json"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Template Docker Compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ monitoring_dir }}/docker-compose.yml"
+    mode: "0644"
+  notify: restart monitoring
+
+- name: Create .env file for Grafana password
+  ansible.builtin.copy:
+    content: |
+      GRAFANA_ADMIN_PASSWORD={{ grafana_admin_password }}
+    dest: "{{ monitoring_dir }}/.env"
+    mode: "0644"
+    owner: ubuntu
+    group: ubuntu
+  no_log: true

@@ -1,0 +1,57 @@
+# StatefulSet with OnDelete update strategy (Bonus)
+# Pods only update when manually deleted
+replicaCount: 3
+
+image:
+  repository: dmitry567/devops-info-service
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "stateful"
+  LOG_LEVEL: "INFO"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+service:
+  type: ClusterIP
+
+autoscaling:
+  enabled: false
+
+rollout:
+  enabled: false
+
+persistence:
+  enabled: false
+
+statefulset:
+  enabled: true
+  podManagementPolicy: OrderedReady
+  # OnDelete: pods only update when manually deleted
+  updateStrategy:
+    type: OnDelete
+  headlessService:
+    publishNotReadyAddresses: true
+  volumeClaimTemplates:
+    accessModes:
+      - ReadWriteOnce
+    storage: 100Mi
+    storageClassName: ""
+
+hooks:
+  preInstall:
+    enabled: false
+  postInstall:
+    enabled: false
+  preUpgrade:
+    enabled: false
+  postUpgrade:
+    enabled: false

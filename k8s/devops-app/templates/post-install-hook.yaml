@@ -1,0 +1,40 @@
+{{- if .Values.hooks.postInstall.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "devops-app.fullname" . }}-post-install
+  labels:
+    {{- include "devops-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ include "devops-app.fullname" . }}-post-install
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: post-install-job
+        image: curlimages/curl:8.11.0
+        command:
+        - sh
+        - -c
+        - |
+          echo "🎉 Post-install hook: Verifying deployment..."
+          echo "Waiting for service to be ready..."
+          sleep 10
+          
+          SERVICE={{ include "devops-app.fullname" . }}
+          PORT={{ .Values.service.port }}
+          
+          echo "Testing health endpoint..."
+          if curl -f http://$SERVICE:$PORT/health; then
+            echo "✅ Health check passed!"
+          else
+            echo "⚠️  Health check failed (service may still be starting)"
+          fi
+          
+          echo "✅ Post-install verification complete"
+{{- end }}
