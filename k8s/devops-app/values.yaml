@@ -186,3 +186,19 @@ monitoring:
   serviceMonitor:
     enabled: false
     interval: 30s
+
+# StatefulSet configuration
+statefulset:
+  enabled: false
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  headlessService:
+    publishNotReadyAddresses: true
+  volumeClaimTemplates:
+    accessModes:
+      - ReadWriteOnce
+    storage: 1Gi
+    storageClassName: ""
