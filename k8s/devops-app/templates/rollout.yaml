@@ -36,6 +36,10 @@ spec:
       serviceAccountName: {{ include "devops-app.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.initContainers.enabled }}
+      initContainers:
+        {{- include "devops-app.initContainers" . | nindent 8 }}
+      {{- end }}
       containers:
       - name: {{ .Chart.Name }}
         securityContext:
@@ -57,8 +61,8 @@ spec:
         - secretRef:
             name: {{ include "devops-app.fullname" . }}-secret
         {{- end }}
-        {{- if .Values.configFile.enabled }}
         volumeMounts:
+        {{- if .Values.configFile.enabled }}
         - name: config-volume
           mountPath: /config
           readOnly: true
@@ -66,6 +70,11 @@ spec:
         {{- if .Values.persistence.enabled }}
         - name: data-volume
           mountPath: /data
+        {{- end }}
+        {{- if and .Values.initContainers.enabled .Values.initContainers.download.enabled }}
+        - name: workdir
+          mountPath: /data/downloaded
+          readOnly: true
         {{- end }}
         livenessProbe:
           {{- toYaml .Values.livenessProbe | nindent 12 }}
@@ -83,6 +92,10 @@ spec:
       - name: data-volume
         persistentVolumeClaim:
           claimName: {{ include "devops-app.fullname" . }}-data
+      {{- end }}
+      {{- if and .Values.initContainers.enabled .Values.initContainers.download.enabled }}
+      - name: workdir
+        emptyDir: {}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

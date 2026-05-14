@@ -83,3 +83,24 @@ vault.hashicorp.com/agent-inject-template-config: |
 {{- end }}
 {{- end }}
 {{- end }}
+
+{{/*
+Init containers
+*/}}
+{{- define "devops-app.initContainers" -}}
+{{- if .Values.initContainers.enabled }}
+{{- if .Values.initContainers.download.enabled }}
+- name: init-download
+  image: {{ .Values.initContainers.download.image }}
+  command: ['sh', '-c', 'wget -O {{ .Values.initContainers.download.targetPath }} {{ .Values.initContainers.download.url }}']
+  volumeMounts:
+    - name: workdir
+      mountPath: /work-dir
+{{- end }}
+{{- if .Values.initContainers.waitForService.enabled }}
+- name: wait-for-service
+  image: {{ .Values.initContainers.waitForService.image }}
+  command: ['sh', '-c', 'echo "Waiting for {{ .Values.initContainers.waitForService.serviceName }}..." && for i in $(seq 1 {{ .Values.initContainers.waitForService.timeout }}); do if nslookup {{ .Values.initContainers.waitForService.serviceName }}; then echo "Service ready!"; exit 0; fi; echo "Attempt $i/{{ .Values.initContainers.waitForService.timeout }}"; sleep 2; done; echo "Timeout waiting for service"; exit 1']
+{{- end }}
+{{- end }}
+{{- end }}
