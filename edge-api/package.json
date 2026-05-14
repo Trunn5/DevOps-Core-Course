@@ -1,0 +1,26 @@
+{
+  "name": "edge-api",
+  "version": "1.0.0",
+  "description": "Cloudflare Workers edge deployment for DevOps Core Course",
+  "main": "src/index.ts",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail",
+    "deployments": "wrangler deployments list",
+    "rollback": "wrangler rollback"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "edge",
+    "serverless"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.91.0"
+  }
+}
