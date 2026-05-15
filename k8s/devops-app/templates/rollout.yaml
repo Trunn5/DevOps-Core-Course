@@ -1,0 +1,119 @@
+{{- if .Values.rollout.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "devops-app.fullname" . }}
+  labels:
+    {{- include "devops-app.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "devops-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.configFile.enabled }}
+        checksum/config-file: {{ include (print $.Template.BasePath "/configmap-file.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.secrets.enabled }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- include "devops-app.vaultAnnotations" . | nindent 8 }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "devops-app.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "devops-app.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- include "devops-app.envVars" . | nindent 8 }}
+        {{- if .Values.configMap.enabled }}
+        envFrom:
+        - configMapRef:
+            name: {{ include "devops-app.fullname" . }}
+        {{- end }}
+        {{- if .Values.secrets.enabled }}
+        - secretRef:
+            name: {{ include "devops-app.fullname" . }}-secret
+        {{- end }}
+        {{- if .Values.configFile.enabled }}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+          readOnly: true
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: data-volume
+          mountPath: /data
+        {{- end }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 12 }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 12 }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      {{- if .Values.configFile.enabled }}
+      - name: config-volume
+        configMap:
+          name: {{ include "devops-app.fullname" . }}-config-file
+      {{- end }}
+      {{- if .Values.persistence.enabled }}
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: {{ include "devops-app.fullname" . }}-data
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  strategy:
+    {{- if eq .Values.rollout.strategy "blueGreen" }}
+    blueGreen:
+      activeService: {{ default (include "devops-app.fullname" .) .Values.rollout.blueGreen.activeService }}
+      previewService: {{ default (printf "%s-preview" (include "devops-app.fullname" .)) .Values.rollout.blueGreen.previewService }}
+      autoPromotionEnabled: {{ .Values.rollout.blueGreen.autoPromotionEnabled }}
+      {{- if .Values.rollout.blueGreen.autoPromotionSeconds }}
+      autoPromotionSeconds: {{ .Values.rollout.blueGreen.autoPromotionSeconds }}
+      {{- end }}
+    {{- else }}
+    canary:
+      {{- if .Values.rollout.canary.maxSurge }}
+      maxSurge: {{ .Values.rollout.canary.maxSurge | quote }}
+      {{- end }}
+      {{- if .Values.rollout.canary.maxUnavailable }}
+      maxUnavailable: {{ .Values.rollout.canary.maxUnavailable | quote }}
+      {{- end }}
+      steps:
+        {{- toYaml .Values.rollout.canary.steps | nindent 8 }}
+    {{- end }}
+{{- end }}

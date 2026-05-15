@@ -1,0 +1,6 @@
+dependencies:
+- name: devops-common
+  repository: file://../devops-common
+  version: 1.0.0
+digest: sha256:f5821ffdf9ce2d496ad8000b8e8eb324185be3e3cd79f026bf56575101e4fc23
+generated: "2026-04-02T21:58:44.113067+03:00"

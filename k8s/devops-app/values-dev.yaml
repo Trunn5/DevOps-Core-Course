@@ -1,0 +1,62 @@
+# Development environment values
+replicaCount: 1
+
+image:
+  tag: "latest"
+  pullPolicy: Always
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "development"
+  LOG_LEVEL: "DEBUG"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+ingress:
+  enabled: false
+
+service:
+  type: NodePort
+  nodePort: 30080
+
+autoscaling:
+  enabled: false
+
+rollout:
+  enabled: true
+  strategy: canary
+  canary:
+    steps:
+      - setWeight: 20
+      - pause: {}
+      - analysis:
+          templates:
+            - templateName: health-check
+      - setWeight: 40
+      - pause:
+          duration: 30s
+      - setWeight: 60
+      - pause:
+          duration: 30s
+      - setWeight: 80
+      - pause:
+          duration: 30s
+      - setWeight: 100
+  analysis:
+    enabled: true
+
+hooks:
+  preInstall:
+    enabled: true
+  postInstall:
+    enabled: true
+  preUpgrade:
+    enabled: false
+  postUpgrade:
+    enabled: false

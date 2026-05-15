@@ -1,0 +1,24 @@
+{
+  "application": {
+    "name": "devops-info-service",
+    "version": "1.0.0",
+    "environment": "{{ .Values.environment }}",
+    "description": "DevOps course information service"
+  },
+  "features": {
+    "metrics_enabled": true,
+    "health_check_enabled": true,
+    "visits_tracking": true,
+    "structured_logging": true
+  },
+  "settings": {
+    "log_format": "json",
+    "cors_enabled": false,
+    "rate_limiting": false,
+    "cache_ttl_seconds": 300
+  },
+  "data": {
+    "visits_file": "/data/visits",
+    "config_file": "/config/config.json"
+  }
+}

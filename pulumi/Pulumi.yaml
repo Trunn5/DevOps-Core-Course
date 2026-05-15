@@ -1,0 +1,7 @@
+name: devops-infra
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: DevOps course VM infrastructure (Yandex Cloud)
+

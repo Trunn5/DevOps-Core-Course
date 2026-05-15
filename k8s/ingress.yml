@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devops-apps-ingress
+  namespace: devops
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    app: devops-ingress
+spec:
+  ingressClassName: nginx
+  tls:
+  - secretName: devops-tls-secret
+  rules:
+  - http:
+      paths:
+      - path: /app1(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: devops-python-service
+            port:
+              number: 80
+      - path: /app2(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: devops-nginx-service
+            port:
+              number: 80
